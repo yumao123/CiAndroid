@@ -1,0 +1,6 @@
+# -*- coding: utf-8 -*-
+import nose
+from htmloutput.htmloutput import HtmlOutput
+
+if __name__ == '__main__':
+	nose.main(addplugins=[HtmlOutput()])

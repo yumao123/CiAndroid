@@ -1,0 +1,14 @@
+<div class="div-inside" ng-controller="ShowLogController">
+	<div class="col-md-12">
+	<div class="box box-primary" style="margin-top:10px;" name="showLogForm" novalidate>
+		<div class="box-header with-border">
+            <p class="control-label"><strong><h3>日志</h3></strong></p>
+        </div>
+		<div class="box-body">
+	        <form role='form'>
+	        	<div class="black-inside form-control" style="margin-top:10px;height:800px;overflow:auto;" required>{{sideData.log_info}}</div>
+	        </form>
+		</div>
+	</div>
+	</div>
+</div>

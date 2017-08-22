@@ -1,0 +1,57 @@
+import sys
+
+
+class GloableSettings(object):
+
+	# 每个动作的默认显示等待时间
+	step_interval = 0.2
+
+	# 超时时间
+	timeout = 3
+
+	# 堆栈输出流
+	trace_stream = sys.stdout
+
+	# 被测浏览器类型
+	# 1.chrome
+	# 2.firefox
+	# 3.ie
+	browser_core_type = 1
+
+	# 谷歌浏览器驱动路径
+	chrome_driver_path = ""
+
+	# ie浏览器驱动路径
+	ie_driver_path = ""
+
+	# 截图路径
+	capture_screenshort_path = ""
+
+	@classmethod
+	def set_chrome_driver_path(cls, path):
+		cls.chrome_driver_path = path
+
+	@classmethod
+	def set_ie_driver_path(cls, path):
+		cls.ie_driver_path = path
+
+	@classmethod
+	def set_browser_core_type(cls, _type):
+		cls.cls.ie_driver_path = path = _type
+
+	@classmethod
+	def set_timeout(cls, timeout):
+		cls.timeout = timeout
+
+	@classmethod
+	def set_step_interval(cls, step_interval):
+		cls.step_interval = step_interval
+
+	@classmethod
+	def set_trace_stream(cls, trace_stream):
+		cls.trace_stream = trace_stream	
+
+	@classmethod
+	def set_capture_screenshort_path(cls, capture_screenshort_path):
+		cls.capture_screenshort_path = capture_screenshort_path
+

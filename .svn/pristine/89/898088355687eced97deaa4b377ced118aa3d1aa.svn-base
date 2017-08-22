@@ -1,0 +1,89 @@
+<!-- content body begin -->
+<section class="content">
+	<div class="row">
+        <div class="col-lg-6 col-xs-12">
+          <!-- small box -->
+          	<div class="small-box bg-yellow">
+            	<div class="inner">
+            		<h4><b>人员信息</b></h4>
+              		<p>姓名: {{home.userinfo.username}}</p>
+              		<p>注册邮箱: {{home.userinfo.email}}</p>
+              		<p>Identity: {{home.userinfo.Identity}}</p>
+            	</div>
+            	<a href="#/user_setting" class="small-box-footer">人员信息 &nbsp;<i class="fa fa-arrow-circle-right"></i></a>
+          	</div>
+        </div>
+        <div class="col-lg-6 col-xs-12">
+          <!-- small box -->
+          	<div class="small-box bg-aqua">
+            	<div class="inner">
+              		<h3><b>{{home.buildinfo.coding}}</b></h3>
+              		<p>项代码缓存</p>
+            	</div>
+            	<a href="#/local_repositories" class="small-box-footer">代码仓库 &nbsp;<i class="fa fa-arrow-circle-right"></i></a>
+          	</div>
+        </div>
+   	</div>
+
+   	<div class="row">
+        <div class="col-lg-6 col-xs-12">
+          <!-- small box -->
+          	<div class="small-box bg-green">
+            	<div class="inner">
+              		<h3><b>{{home.buildinfo.switch}}</b></h3>
+              		<p>个开关</p>
+            	</div>
+            	<a href="#/build_config_setting" class="small-box-footer">开关设置 &nbsp;<i class="fa fa-arrow-circle-right"></i></a>
+          	</div>
+        </div>
+   	</div>
+
+	<div class="row">
+        <div class="col-lg-12 col-xs-12">
+          	<div class="box box-info">
+          		<div class="box-header with-border">
+          			<h4 class="box-title">快捷方式</h4>
+          		</div>
+          		<div class="box-body">
+                    <a class="btn btn-app" href="#/user_group_setting">
+                        <i class="fa fa-user"></i> 人员组设置
+                    </a>
+                    <a class="btn btn-app" href="#/building">
+                        <i class="fa fa-cogs"></i> 打包
+                    </a>                  			
+            	</div>
+          	</div>
+        </div>
+    </div>
+
+  	<div class="row">
+		<div class="col-md-12 col-xs-12">
+  			<div class="box box-info">
+  				<!-- box header begin -->
+  				<div class="box-header with-border">
+  					<h3 class="box-title">最近日志</h3>
+  					<div class="box-tools pull-right">
+  						<button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+  					</div>
+  				</div>
+  				<!-- box header end -->
+
+  				<!-- box body begin -->
+  				<div class="box-body">
+  					<div class="table-responsive">
+  						<table class="table">
+
+  						</table>
+  					</div>
+  				</div>
+  				<!-- box body end -->
+
+  				<!-- box footer begin -->
+  				<div class="box-footer clearfix">
+  				</div>
+  				<!-- box footer end -->
+  			</div>
+      	</div>
+  	</div>
+</section>
+

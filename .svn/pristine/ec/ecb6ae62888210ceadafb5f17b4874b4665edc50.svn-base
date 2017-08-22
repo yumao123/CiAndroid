@@ -1,0 +1,56 @@
+# -*- coding: utf-8 -*-
+from dagger.browser_emulator import BrowserEmulator
+from dagger.common import GloableSettings as gs
+import time
+
+
+
+# 测试dagger
+class TestDagger(object):
+
+	def test_baidu_search(self):
+		gs.set_chrome_driver_path("C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe")
+		be = BrowserEmulator()
+		be.open("http://www.baidu.com")
+		be.type("//input[@id='kw']", "selenium")
+		be.click("//input[@id='su']")
+
+
+	def test_login(self):
+		# 这个网站是内网环境,在外网无法连接.
+		# 为浏览器driver赋地址(本地绝对路径)
+		gs.set_chrome_driver_path("C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe")
+		# 所需定位目标的xpath路径
+		mobile = 		"//input[@name='mobile']"
+		password = 		"//input[@name='password']"
+		validateCode = 	"//input[@name='validateCode']"
+		submit = 		"//button[@type='submit']"
+		loading = 		"//div[@id='_loadingIcon']"
+
+		# 初始化浏览器
+		be = BrowserEmulator()
+		# 打开目标路径
+		be.open("http://172.16.0.144:8083/")
+		# be.maximize_window()
+
+		# 定位元素
+		be.type(mobile, "700154")
+		be.type(password, "888888")
+		be.type(validateCode, "1")
+		be.click(submit)
+
+		# 根据url判断是否正确登录,只有当url包含了 /#/view/sfa/ 时,才代表登录成功
+		if be.expect_url_content('/#/view/sfa/', time.time(), 5):
+			# 等待 loading元素直到附着在页面
+			be.expect_element_existOrNot(True, loading, 5)
+			# 等待 loading元素直到不可见
+			be.expect_element_visibleOrNot(False, loading, 5)
+
+		# 关闭浏览器
+		be.close()
+
+
+if __name__ == '__main__':
+	test = TestDagger()
+	test.test_login()
+

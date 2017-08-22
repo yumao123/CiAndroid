@@ -1,0 +1,618 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from build_script.util.my_dict import toDict
+from build_script import config as build_conf
+import exceptionhelpers as EH
+from build_script.globals import ci_globals
+import re
+import shutil
+import os
+import time
+import sys
+import traceback
+import logging
+
+
+class BaseOs(object):
+
+	@staticmethod
+	def add_history(conf_info):
+		from models.enterprise import BuildHistoryModule
+		ret, stauts = BuildHistoryModule.add_history(conf_info)
+		if stauts is False:
+			raise EH.PretreatError('Setup error: {0}'.format(ret))
+		else:
+			return ret
+
+
+	@staticmethod
+	def modify_enterprise_info(conf_info):
+		from models.enterprise import EnterpriseInfoModule as enterpriseinfo
+		ret = enterpriseinfo.modify_enterprise_info(conf_info)
+		if ret is not None:
+			raise EH.PretreatError('Setup error: {0}'.format(ret))
+
+
+	@staticmethod
+	def modify_ip_info(conf_info):
+		from models.enterprise import IpModule
+		ret = IpModule.modify_ip_info(conf_info)
+		if ret is not None:
+			raise EH.ClearupError('Setup error: {0}'.format(ret))
+
+
+	@staticmethod
+	def modify_history(status_info):
+		from models.enterprise import BuildHistoryModule
+		ret = BuildHistoryModule.modify_history(status_info)
+		if ret is not None:
+			raise EH.PretreatError('Setup error: {0}'.format(ret))
+
+
+	def get_configure_setting(self):
+		from models.enterprise import ConfigureSettingModule as Config
+		self.conf_setting = Config.get_configureInfo(self.os_mode)
+
+
+	@staticmethod
+	def to_parse_file(local_code, config_file, data):
+		"""
+
+
+		eg:local_code -> /home/CiApp/code/xtion6.2
+		eg:config_file -> {file_relative_path:/app/assert/config.xml, file_type:xml, ...}
+		"""
+		#eg:/home/CiApp/code/xtion6.2/app/assert/config.xml
+		file_path = '{0}{1}'.format(local_code, config_file.file_relative_path)
+		#
+		if config_file.file_type == 'xml':
+			from build_script.util.xml_parse import update_xml_file
+			update_xml_file(file_path, data= data)
+
+		#
+		if config_file.file_type == 'file':
+			from build_script.util.file_parse import update_regular_file
+			update_regular_file(file_name= file_path, data=data)
+
+		#
+		if config_file.file_type == 'plist':
+			#todo
+			pass
+
+
+
+	def setup(self):pass
+	def finish(self):pass
+
+	def update_code(self):
+		"""
+
+		"""
+		from build_script.util.update_code import update_code
+		err = update_code(self.code_info)
+		if err is not None:
+			raise EH.PackageError('Update code error:{0}'.format(err))
+
+
+	def update_conf(self):pass
+	def build(self):pass
+	def terminate(self):pass
+
+
+	def deploy(self):
+		"""
+
+		"""
+		err = None
+
+		release_path 	= self.deploy_info.get('release_path')
+		download_path 	= self.deploy_info.get('download_path')
+
+		#
+		def find_package(release_path= None, os_mode= None):
+			try:
+				#android
+				print release_path
+				print os_mode
+				if os_mode == 'android':
+					for files in os.listdir(release_path):
+						fileName = os.path.join(release_path, files)
+						if os.path.isfile(fileName):
+							#Get the file with xxx-release
+							re_apkFile = re.compile(r'^(.+?)-release.apk$')
+							if re_apkFile.search(files):
+								return fileName, None
+							else:
+								# for gradle
+								re_apkFile = re.compile(r'^(.+?)-release-unaligned.apk$')
+								if re_apkFile.search(files):
+									return fileName, None
+					return None, "Can not find package"
+			except Exception as e:
+				return None, traceback.format_exc()
+
+		package_path, ret = find_package(release_path= release_path, os_mode= self.os_mode)
+		#Copy package to dest dir
+
+		if package_path == None:
+			err = ret
+		else:
+			try:
+				#Remove old one
+				os.remove(download_path)
+			except:
+				pass
+			finally:
+				#Copy
+				shutil.copy(package_path, download_path)
+		
+		if err is not None:
+			raise EH.PackageError('Deploy Error:{0}'.format(err))
+
+
+	def get_download_url(self):
+		"""
+
+		"""
+		#
+		package_dir 		= None
+		package_name 		= self.setup_info.get('package_name')
+		enterprise_number 	= str(self.conf_info.get('enterprise_number'))
+
+
+		if self.os_mode == 'android':
+			package_dir = '{0}android/'.format(build_conf.PACKAGE_REPROSITORY)
+		elif self.os_mode == 'ios':
+			pass
+
+		if not os.path.exists(package_dir):
+			os.mkdir(package_dir)
+
+		for filename in os.listdir(package_dir):
+			mark = '{0}\..'.format(enterprise_number)
+
+			if re.search(mark, filename):
+				return '{0}{1}/{2}'.format(package_dir, filename, package_name)
+
+		dirname = '{0}{1}.package'.format(package_dir, enterprise_number)
+		os.mkdir(dirname)
+		return '{0}/{1}'.format(dirname, package_name)
+
+
+
+	def make_packagename(self):
+		"""
+			modify:
+				2017-01-19:
+		"""
+		isandroid = False
+		if isinstance(self, AndroidOs):
+			isandroid = True
+
+		version_name = None
+		package_name = None
+
+		if isandroid:
+			#eg:is_enterprise:0
+			is_enterprise 		= True if int(self.conf_info.get('is_enterprise')) == 1 else False
+			#version_number:6.2.4
+			version_number 		= self.conf_info.get('version_number')
+			if isinstance(version_number, unicode):
+				version_number = version_number.encode('utf-8')
+			if isinstance(version_number, int):
+				version_number = str(version_number)
+			#release_number:2
+			release_number 		= str(self.conf_info.get('release_number'))
+			#build_number:140
+			build_number 		= str(self.conf_info.get('build_number'))
+			#enterprise_number:134
+			enterprise_number 	= str(self.conf_info.get('enterprise_number'))
+			#eg:hdqp
+			short_name			= str(self.conf_info.get('short_name'))
+
+			if is_enterprise:
+				#eg:V6.2.3120.6
+				version_name = 'V{version_number}{enterprise_number}.{build_number}'.format(
+						version_number= version_number, enterprise_number= enterprise_number.zfill(3), build_number= build_number
+					)
+				#eg:xtion_SHINHO_6.2.3120.6.apk
+				package_name = 'xtion_{short_name}_{version_number}{enterprise_number}.{build_number}.apk'.format(
+						short_name= short_name, version_number= version_number, enterprise_number= enterprise_number.zfill(3), build_number= build_number
+					)
+			else:
+				#eg:Xtionkx_A001_6.2.3.1.120
+				version_name = 'Xtionkx_A001_{version_number}.{release_number}.{build_number}'.format(
+					version_number= version_number, release_number= release_number, build_number= build_number
+					)
+				#eg:Xtionkx_A001_6.2.3.1.120.apk
+				package_name = 'Xtionkx_A001_{version_number}.{release_number}.{build_number}.apk'.format(
+					version_number= version_number, release_number= release_number, build_number= build_number
+					)
+
+		return version_name, package_name
+
+
+class IosOs(BaseOs):pass
+
+class AndroidOs(BaseOs):
+
+	"""
+
+	"""
+	def __init__(self, build_info):
+		"""
+
+		"""	
+		#code info
+		self.code_info = dict(
+			code_url		= build_info.code_url,
+			code_version	= build_info.code_version,
+			code_type		= build_info.code_type,
+			local_reperotry	= build_conf.LOCAL_CODE_REPERTORY,
+			cache_reperotry	= build_conf.PACKAGE_REPROSITORY,
+			usage 			= 'update',
+		)
+		#config info
+		self.conf_info = build_info
+		#is change logo
+		self.is_changeLogo = build_info.is_changeLogo
+		#setup info
+		self.setup_info = None
+		#Configure setting
+		self.conf_setting = None
+		#os mode
+		self.os_mode = 'android'
+		#Deploy info
+		self.deploy_info = None
+		#Status info
+		self.status_info = None
+		#Exception
+		self.exception = None
+
+
+
+	def setup(self):
+		"""
+
+		"""
+		ci_globals.clear()
+		#
+		start_time_stamp = str(time.strftime("%Y-%m-%d.%H_%M_%S", time.localtime()))
+		self.conf_info['start_time_stamp'] = start_time_stamp
+		#Add build history
+		history_id = self.add_history(self.conf_info)
+		#Modify enterprise information
+		self.modify_enterprise_info(self.conf_info)
+		#Modify gateway information
+		self.modify_ip_info(self.conf_info)
+		#Get configure setting
+		self.get_configure_setting()
+		#Get versionname and packagename
+		version_name, package_name = self.make_packagename()
+
+		self.setup_info = dict(
+			#eg:V6.3.2.2.134
+			version_name	= version_name,
+			#eg:xtion_6.3.2012.3.apk
+			package_name	= package_name,
+			#eg:xtion6.2
+			folder_name		= self.code_info.get('code_url').split('/')[-1],
+			#eg:/Users/xw/CiApp/code/xtion6.2
+			local_code 		= '{0}{1}'.format(
+				self.code_info.get('local_reperotry'), self.code_info.get('code_url').split('/')[-1]),
+		)
+
+		#Get download url
+		#eg:/Users/xw/CiApp/repository/android/155.pakacage/xtion_6.2.3.apk
+		download_url = self.get_download_url()
+
+		self.status_info = dict(
+			id 				= history_id,
+			package_name	= None,
+			download_url 	= download_url if isinstance(download_url, unicode) else download_url.decode('utf-8'),
+			status 			= -2,
+			error_info 		= None,
+			warning_info 	= None,
+		)
+
+		if isinstance(download_url, unicode):
+			self.status_info['download_url'] = download_url.encode('utf-8')
+
+		#Combine
+		self.setup_info = dict(self.setup_info, **dict(download_url= download_url))
+		#Combine
+		self.conf_info = dict(self.conf_info, **dict(
+				BUILDNO 	= self.conf_info.get('build_number'),
+				VERSIONNO 	= self.conf_info.get('enterprise_number'),
+				versionName = version_name,
+			)
+		)
+
+		self.deploy_info = dict(
+			#eg:/Users/xw/CiApp/code/xtion6.2/app/build/outputs/apk/
+			release_path	= '{0}{1}/app/build/outputs/apk/'.format(
+				self.code_info.get('local_reperotry'), self.setup_info.get('folder_name')),
+			download_path 	= download_url,
+		)
+
+		#Init log file
+		#eg:
+		log_path = build_conf.LOG_DIR
+		try:
+			if os.path.exists(log_path) is False:
+				os.makedirs(log_path)
+			#eg:
+			log_file = '{log_path}{enterprise_number}_{current_time}.log'.format(
+					log_path= log_path, enterprise_number= self.conf_info.get('enterprise_number'), current_time= start_time_stamp
+				)
+		except Exception, e:
+			pass
+		with open(log_file, 'w'):
+			pass
+
+		#
+		ci_globals.build_log, ci_globals.update_code_log = log_file, log_file
+
+
+	def finish(self):
+		"""
+
+		"""
+		if self.exception is not None:
+			self.status_info['status'] = -1
+			self.status_info['error_info'] = '{0}:{1}'.format(type(self.exception), self.exception)
+			self.status_info['package_name'] = None
+			self.status_info['download_url'] = None
+
+		self.modify_history(self.status_info)
+
+	def closure(self):
+		package_name = self.setup_info.get('package_name')
+		if not isinstance(package_name, unicode):
+			package_name = package_name.decode('utf-8')
+		self.status_info['package_name'] = package_name
+		self.status_info['status'] = 1
+
+
+	def update_conf(self):
+		"""
+
+		"""	
+		local_code 			= self.setup_info.get("local_code")
+		enterprise_number 	= self.conf_info.get("enterprise_number")
+		#Update config
+		if len(self.conf_setting):
+			for con_set in self.conf_setting:
+				#
+				con_set = toDict(con_set)
+				switch_info = {}
+				for file_item in con_set.file_items:
+					if file_item['item_name'] in self.conf_info:
+						switch_info[file_item['item_name']] = self.conf_info.get(file_item['item_name'])
+				if switch_info:
+					self.to_parse_file(local_code, con_set, switch_info)
+
+		#Update logo
+		if self.is_changeLogo:
+			from build_script.util.update_logo import update_logo
+
+			logo_info = dict(local_code= local_code, enterprise_number= enterprise_number, os_mode= self.os_mode)
+			update_logo(logo_info)
+
+
+	def build(self):
+		"""
+
+		"""	
+		from build_script.util.build import build_by_gradle
+
+		local_code = self.setup_info.get('local_code')
+		err = build_by_gradle(local_code)
+		if err is not None:
+			raise EH.PackageError('Build Error:{0}'.format(err))
+
+
+
+class PackageFactory(object):
+	"""package PackageFactory
+
+
+
+	"""
+	def os_select(self, build_info):
+		"""
+
+		Example usage:
+		factory = PackageFactory()
+		obj = factory.os_select(build_info)
+		obj.setup()
+		obj.finish()
+
+		"""	
+		os = build_info.get('os_mode').lower()
+
+		if os == 'android':
+			return AndroidOs(build_info)
+		elif os == 'ios':
+			return IosOs(build_info)
+
+
+
+
+class Task(object):
+	"""
+
+
+	"""
+
+	@classmethod
+	def task_cachecode(cls, cache_info):
+		"""Cache code task
+
+		Example usage::
+
+
+		"""
+
+		from build_script.util.update_code import update_code
+		from models.enterprise import RepositoryModule 
+
+		cache_info['usage'] = 'cache'
+		cache_info['cache_reperotry'] = build_conf.PACKAGE_REPROSITORY
+		ret = update_code(cache_info)
+		if ret is not None:
+			ret = -1
+		else:
+			ret = 1
+		RepositoryModule.modify_repository(id= cache_info.get('cache_id'), issuccess= ret)
+
+
+	@classmethod
+	def task_packageupload(cls, upload_info):
+		"""Package upload task
+
+		Example usage::
+
+
+		"""
+		def check_client_name(package_name):
+			try:
+				if re.search('xtion_.*_.*.apk$', package_name):
+					#
+					return package_name.split('_')[1].lower()
+			except AttributeError:
+				return None
+
+
+		def _Task__callback_progress(finish, size):
+			#return the progress info
+			ci_globals.upload_progress = int((float(finish) / float(size)) * 100)
+
+
+		import paramiko
+		from build_script.config import PACKAGE_SERVER
+		hostname 	= PACKAGE_SERVER['hostname']
+		port		= PACKAGE_SERVER['port']
+		username	= PACKAGE_SERVER['username']
+		password	= PACKAGE_SERVER['password']
+		pakcagename	= upload_info['package_name']
+
+		#eg:hdbq
+		client_name = check_client_name(pakcagename)
+
+		#eg:/home/easyinfo/web/soft/hdbq/xtion_hdbq_6.2.3.14.apk
+		remotepath = '{dir}{client_name}/{package_name}'.format(
+			dir=PACKAGE_SERVER['dir'], client_name= client_name, package_name= pakcagename
+		)
+		#eg:/Users/xw/CiApp/repository/android/111.package/xtion_HLHG_6.2.111.28.apk
+		localpath = upload_info['download_url']
+
+		#1.Ssh connect to server
+		ssh_conn_handle = paramiko.SSHClient() 
+		ssh_conn_handle.set_missing_host_key_policy(paramiko.AutoAddPolicy())  
+		ssh_conn_handle.connect(hostname, port, username, password, timeout=4)
+		#2.Find the correct url
+		#   a.If dir exsits...
+		cmd = 'ls -l {dir}{client_name}'.format(dir=PACKAGE_SERVER['dir'], client_name= client_name)
+		stdin,stdout,stderr=ssh_conn_handle.exec_command(cmd)
+		#   b.If dir not exsits , mkdir and build the html
+		if len(stdout.read()) == 0:
+			cmd = 'mkdir {dir}{client_name}'.format(dir=PACKAGE_SERVER['dir'], client_name= client_name)
+			ssh_conn_handle.exec_command(cmd)
+		ssh_conn_handle.close()
+
+		#2.Upload package
+		sftp_conn_handle = paramiko.Transport((hostname, port))
+		sftp_conn_handle.connect(username= username, password= password)
+		sftp = paramiko.SFTPClient.from_transport(sftp_conn_handle)
+
+		#Usage:
+		#put(localpath, remotepath, callback)
+		sftp.put(localpath, remotepath, __callback_progress)
+		sftp_conn_handle.close()
+
+
+	@classmethod
+	def task_package(cls, build_info):
+		"""Package task
+
+		Example usage::
+
+
+		"""
+
+		def package_process(build_info, ci):
+
+			#Debug in here##
+
+			################
+			try:
+				ci.update_code()
+				ci.update_conf()
+				ci.build()
+				ci.deploy()
+				ci.closure()
+			except Exception, e:
+				#notify
+				ci.exception = traceback.format_exc()
+			finally:
+				ci.finish()
+		factory = PackageFactory()
+		ci = factory.os_select(build_info)
+		ci.setup()
+
+		import multiprocessing
+		p_package = multiprocessing.Process(target=package_process, name="package_process", args=(build_info, ci, ))
+
+		p_package.start()
+
+		while p_package.is_alive():
+
+			import time
+			time.sleep(1)
+			if ci_globals.package_process_stop & p_package.is_alive():
+				ci_globals.clear()
+				p_package.terminate()
+
+
+
+
+
+
+
+#not here
+def exec_task_for(task):
+	if task.has_key('task_type'):
+		task_type = task['task_type']
+		task_function = getattr(Task, "task_%s" % task_type)
+	if task.has_key('task_info'):
+		task_info = task['task_info']
+		return task_function(toDict(task_info))
+
+'''
+usage:
+params:			
+history_info:
+eg:
+'''
+#not here
+def getLog(history_info):
+	history_info = toDict(history_info)
+
+	if history_info.has_key('enterprise_number') & history_info.has_key('operation_time'):
+		enterprise_number 	= history_info.enterprise_number
+		operation_time 		= history_info.operation_time
+		file_name = '{log_dir}{enterprise_number}_{operation_time}.log'.format(
+				log_dir= build_conf.LOG_DIR, enterprise_number= enterprise_number, operation_time= operation_time
+			)
+		cmd = 'cat {0}'.format(file_name)
+		#os.popen
+		#usage:
+		#os.popen(command[, mode[, bufsize]])
+		fd = os.popen(cmd)
+		log_info = fd.read()
+		fd.close()
+		return log_info
+	else:
+		return False

@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+
+CustomPage = {
+	"page_name": "custom_page",
+	"locate": "",
+	"visable": [],
+	"not_visable": [],
+	"element": {
+
+	},
+	"form":{
+		"addForm":{
+			"locate": "",
+			"visable": [],
+			"not_visable": [],
+			"element": {
+				"username": ("text", "//input[@name='username']"),
+				"role": ("select", "//input[@name='role']"),
+				"manager": {
+					"locate": [],
+					"visable": [],
+					"not_visable": [],
+					"element": {
+						"mobile": "//input[@name='mobilePhone']",
+					}
+				}
+			}
+		},
+		"modifyForm": {},
+	}
+
+}

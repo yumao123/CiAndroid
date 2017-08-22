@@ -1,0 +1,26 @@
+<div>
+	<div class="modal-header">
+		<h4>{{modal_info.modal_name}}</h4>
+	</div>
+	<div class="modal-body">
+		<div class="box">
+			<form class="form-horizontal" name="entAddForm">
+				<div class="box-body">
+					<div class="col-md-12">
+						<lable class="control-label">企业版本号:</lable>
+						<input type = "number" class="form-control" ng-model="formAddInfo.enterprise_number" placeholder="企业版本号" required>
+						<lable class="control-label">企业名称:</lable>
+						<input class="form-control" ng-model="formAddInfo.enterprise_name" placeholder="企业名称" required>
+						<lable class="control-label">项目负责人:</lable>
+						<input class="form-control" ng-model="formAddInfo.manager" placeholder="项目负责人" required>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<div class="modal-footer">
+		<button class="btn btn-primary" ng-click="ok()" ng-disabled="entAddForm.$invalid">新增</button>
+		<button class="btn btn-warning" ng-click="cancel()">取消</button>
+	</div>
+</div>
+

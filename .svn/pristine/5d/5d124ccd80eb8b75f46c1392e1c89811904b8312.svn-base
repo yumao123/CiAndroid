@@ -1,0 +1,33 @@
+# -*- coding: utf-8 -*-
+from setuptools import find_packages, setup
+import os
+import shutil
+import sys
+
+if len(sys.argv) == 2 and sys.argv[1] == 'clean':
+	#remove .pyc files  
+	for (dirpath, dirnames, filenames) in os.walk('.'):  
+		for filename in filenames:  
+			filepath = os.path.join(dirpath, filename)  
+			if filepath.endswith('.pyc'):  
+				os.remove(filepath)  
+	#remove dist dir  
+	if os.path.exists('dist'):  
+		shutil.rmtree('dist')  
+		  
+	#remove dist dir  
+	if os.path.exists('build'):  
+		shutil.rmtree('build')  
+	  
+	#remove *.egg-info  
+	if os.path.exists('UNKNOWN.egg-info'):  
+		shutil.rmtree('UNKNOWN.egg-info')
+
+
+setup(
+		name = "dagger",
+		version = '1.0',
+		packages = find_packages(),
+		scripts = ['bin/dagger_manager.py'],
+
+	)

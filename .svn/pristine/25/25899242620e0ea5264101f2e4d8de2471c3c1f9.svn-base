@@ -1,0 +1,224 @@
+<div>
+	<div class="modal-header">
+		<h4>{{modal_info.modal_name}}</h4>
+	</div>
+	<form class="modal-body" name="enterpriseForm" novalidate style="max-height: 600px;overflow:auto;">
+		<ul id="osTab" class="nav nav-tabs">
+			<li class="active">
+				<a href="javascript:void(0)" data-toggle="tab" ng-click="mode_select('android')">
+					Android
+				</a>
+			</li>
+			<li><a href="javascript:void(0)" data-toggle="tab" ng-click="mode_select('ios')">Ios</a></li>
+		</ul>
+		<div style="margin:20px;">
+			<div class="panel-group" id="accordion">
+				{{config.file_items}}
+				<div class="panel panel-default">
+					<div class="panel-heading" onclick="(function(){$('#codeInfo').slideToggle();$('#basicInfo').slideUp();$('#gatewayInfo').slideUp();$('#buildInfo').slideUp();})()">
+						<h4 class="panel-title">
+						<a data-toggle="collapse" data-parent="#accordion"
+						  href="">
+						  1.代码路径与版本
+						</a>
+						</h4>
+					</div>
+					<div id="codeInfo" class="panel-collapse collapse in">
+						<div class="panel-body">
+							<div class="form-group">
+								<div class="col-md-6">
+									<p class="control-label" style = 'margin-top: 10px;'><strong>代码地址</strong></p>
+									<div class="input-group">
+										<input type="text" class="form-control" placeholder="输入代码地址" style="width:400px;" ng-model="formData.code_url" required>
+									</div>
+								</div>
+								<div class="col-md-6" ng-show="check_code_fork()=='svn'">
+									<p class="control-label" style = 'margin-top: 10px;'><strong>代码版本</strong></p>
+									<div class="input-group">
+									   <span class="input-group-btn">
+											<button class="btn btn-primary" type="button" ng-click="GetCodeVersion()">
+												获取最新代码
+											</button>
+									   </span>
+									   <input type="text" class="form-control" placeholder="输入版本" ng-model="formData.code_version" required>
+									</div>
+								</div>
+								<div class="col-md-6" ng-show="check_code_fork()=='git'">
+									<p class="control-label" style = 'margin-top: 10px;'><strong>Git Tag</strong></p>
+									<div class="input-group">
+									   <span class="input-group-btn">
+											<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+												选择Git Tag
+											</button>
+									   </span>
+									   <input type="text" class="form-control" placeholder="输入commitId/tagName" ng-model="formData.code_version" required>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="panel panel-default">
+					<div class="panel-heading" onclick="(function(){$('#basicInfo').slideToggle();$('#codeInfo').slideUp();$('#gatewayInfo').slideUp();$('#buildInfo').slideUp();})()">
+						<h4 class="panel-title">
+						<a data-toggle="collapse" data-parent="#accordion"
+						  href="">
+						  2.基本设置
+						</a>
+						</h4>
+					</div>
+					<div id="basicInfo" class="panel-collapse collapse">
+						<div class="panel-body">
+							<div class="control-group">
+								<!-- 必填项begin -->
+								<div class="box box-primary">
+									<div class="box-header with-border">
+										<p class="box-title">基本信息</p>
+									</div>
+									<div class="box-body">
+										<div class="col-md-6">
+											<p class="control-label">安装包名:</p>
+											<input class="form-control" required ng-model="formData.package_name">
+											<p class="control-label">上传地址:</p>
+											<input class="form-control" required ng-model="formData.upload_url">
+										</div>
+										<div class="col-md-6">
+											<p class="control-label">版本号:</p>
+											<input class="form-control" readonly ng-model="formData.enterprise_number">
+										</div>
+										<div class="col-md-12">
+										<div class="col-md-6" style="margin-top:20px">
+											标准产品/项目:
+											<input type="radio" value="0" ng-model="formData.is_enterprise" required/>标准产品
+											<input type="radio" value="1" ng-model="formData.is_enterprise" required/>项目
+										</div>
+										<div class="col-md-6" style="margin-top:20px">
+											是否替换图片:
+											<input type="radio" value="0" ng-model="formData.is_changeLogo" required/>不替换
+											<input type="radio" value="1" ng-model="formData.is_changeLogo" required/>替换
+										</div>
+										</div>
+									</div>
+								</div>
+								<!-- 必填项end -->
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="panel panel-default">
+					<div class="panel-heading" onclick="(function(){$('#buildInfo').slideToggle();$('#basicInfo').slideUp();$('#codeInfo').slideUp();$('#gatewayInfo').slideUp();})()">
+						<h4 class="panel-title">
+						<a data-toggle="collapse" data-parent="#accordion"
+						  href="">
+						  3.开关设置
+						</a>
+						</h4>
+					</div>
+					
+					<div id="buildInfo" class="panel-collapse collapse">
+						<div class="panel-body">
+							<!-- 只有isshow = 'true'的标签才显示 -->
+							<div ng-repeat="(item_list_index, configs) in config_info track by $index" ng-show="configs.isshow == 'true'">
+								<div class="box-header with-border">
+									<p class="box-title">{{configs.description}}({{configs.file_nick_name}})</p>
+									<a href="" ng-click="add_items($index)"><span title="新增设置" class="glyphicon glyphicon-plus"></span></a>
+								</div>
+								<div class="box-body">
+									<div class="control-group col-md-6" ng-repeat="(item_index, item) in item_list[item_list_index].file_items track by $index">
+										<div class="form-group" name={{item.item_name}}>
+											<p class="control-label">{{item.description}}:</p>
+											<input class="form-control" ng-model='item.value' dynamic-name="item.item_name" type={{item.item_type}} name={{item.item_name}} placeholder="若不填则今后保持默认值">
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="control-group col-md-6" ng-show="extend_item != undefined" style="float:right">
+								<div class="form-group" class="control-group col-md-6">
+									<label>请选择一项设置:</label>
+									<select class="form-control" ng-model="ext" ng-options="ext.item_name as ext.description for ext in extend_item.file_items">
+										<option value="">请选择</option>
+									</select>
+								</div>
+								<div style="float:right;margin-top:20px">
+									<button class="btn btn-primary" ng-click="add_extend_item(true)" ng-disabled="ext==undefined">确认添加</button>
+									<button class="btn btn-warning" ng-click="add_extend_item(false)">取消</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="panel panel-default">
+					<div class="panel-heading" onclick="(function(){$('#gatewayInfo').slideToggle();$('#basicInfo').slideUp();$('#codeInfo').slideUp();$('#buildInfo').slideUp();})()">
+						<h4 class="panel-title">
+						<a data-toggle="collapse" data-parent="#accordion"
+						  href="">
+						  4.网关设置
+						</a>
+						</h4>
+					</div>
+					<div id="gatewayInfo" class="panel-collapse collapse">
+						<div class="panel-body">
+						<div class="navbar" style="min-height:250px;">
+							<!-- 左侧导航栏 -->
+							<ul class="nav navbar-left" id="gatewayNav" style = "border-right: 1px solid #c4c8cb;">
+								<li class="nav-header">多租户</li>
+								<li><a href="" ng-click='ChooseGateway("mulTest")'>测试网关</a></li>
+								<li><a href="" ng-click='ChooseGateway("mulFmal")'>正式网关</a></li>
+								<li class="nav-header">旧网关</li>
+								<li><a href="" ng-click='ChooseGateway("oldGateway")'>旧网关</a></li>
+								<li class="nav-header">独立部署</li>
+								<li><a href="" ng-click='ChooseGateway("entTest")'>企业测试网关</a></li>
+								<li><a href="" ng-click='ChooseGateway("entFmal")'>企业正式网关</a></li>
+							</ul>
+							<div class="tab-content">
+
+								<div class = 'control-group'>
+									<div style="margin-top:10px;" class="col-md-5">
+										<p class="control-label">负载IP1(BESTENTERPRISESERVERS_IP):</p>
+										<input class="form-control" ng-model="formData.BESTENTERPRISESERVERS_IP" required> 
+										<p class="control-label">服务器IP(SERVER_IP):</p>
+										<input class="form-control" ng-model="formData.SERVER_IP" required>	
+									</div>
+									<div style="margin-top:10px;" class="col-md-5">
+										<p class="control-label">负载IP2(BESTENTERPRISESERVERS_IP_1):</p>
+										<input class="form-control" ng-model="formData.BESTENTERPRISESERVERS_IP_1" required> 
+										<p class="control-label">企业IP(ENTERPRICE_IP):</p>
+										<input class="form-control" ng-model="formData.ENTERPRICE_IP" required>           				
+									</div>
+									<div style="margin-top:10px;" class="col-md-5">
+										<p class="control-label">服务器端口(SERVER_PORT):</p>
+										<input class="form-control" ng-model="formData.SERVER_PORT" required> 
+									</div>
+									<div style="margin-top:10px;" class="col-md-5">
+										<p class="control-label">企业端口(ENTERPRICE_PORT):</p>
+										<input class="form-control" ng-model="formData.ENTERPRICE_PORT" required> 
+									</div>
+									<div class="col-md-5" style="margin-top:20px">
+										网关选择:
+										<input type="radio" value="0" ng-model="formData.MULTI_SERVER"/ required>旧网关
+										<input type="radio" value="1" ng-model="formData.MULTI_SERVER"/ required>多租户
+									</div>
+									<div class="col-md-5" style="margin-top:20px">
+										负载选择:
+										<input type="radio" value="false" ng-model="formData.isFuzai"/ required>无负载
+										<input type="radio" value="true" ng-model="formData.isFuzai"/ required>有负载
+									</div>
+								</div>
+							</div>
+						</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+	<div class="modal-footer">
+		<div>
+			<button class="btn btn-danger pull-left" ng-click="delete()">删除该企业</button>
+		</div>
+		<div>
+			<button class="btn btn-primary" ng-click="ok()" ng-disabled="enterpriseForm.$invalid">打包</button>
+			<button class="btn btn-warning" ng-click="cancel()">取消</button>
+		</div>
+	</div>
+</div>

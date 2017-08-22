@@ -1,0 +1,18 @@
+<div class="div-inside" ng-controller="SidenavController">
+	<form class="col-md-12" style="margin-top:10px;" name="htmlModForm" novalidate>
+		<p class="control-label"><strong><h3>修改HTML:</h3></strong></p>
+		<div class="form-group">
+			<div class="input-group">
+			   <span class="input-group-btn">
+					<button class="btn btn-default" type="button" ng-click="GetHtml()">
+						获取HTML内容
+					</button>
+			   </span>
+			   <input type="text" class="form-control" placeholder="输入升级地址" ng-model="sideData.updateUrl" required>
+			</div>
+	        <textarea class="form-control" rows="4" ng-model="sideData.htmlInfo" placeholder="默认为空" style="margin-top:10px;height:600px;max-height:800px;overflow:auto;" required spellcheck="false"></textarea>
+	    </div>
+
+	</from>
+	<a href="" ng-click="modify()" ng-disabled="htmlModForm.$invalid"><span class="fa fa-pencil" style="margin-right:10px"></span><b>修改</b></a>
+</div>

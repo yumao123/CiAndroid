@@ -1,0 +1,37 @@
+<div>
+	<div class="modal-header">
+		<h4>{{modal_info.modal_name}}</h4>
+	</div>
+	<div class="modal-body">
+		<div class="box">
+			<form class="form-horizontal" name="entAddForm">
+				<div class="box-body">
+					<div class="col-md-12" style="margin-top:10px;">
+						<lable class="control-label">代码路径:</lable>
+						<div class="input-group">
+					   	<span class="input-group-btn">
+							<button class="btn btn-primary" type="button" ng-click="TestCodeConnect()">
+								测试连接
+							</button>
+					   	</span>
+					   	<input type="text" class="form-control" placeholder="输入地址" ng-model="formData.code_url" required>
+					   	</div>
+					</div>
+					<div class="col-md-12" style="margin-top:10px;">
+						<lable class="control-label">代码版本:</lable>
+						<input type="number" class="form-control" ng-model="formData.code_version" placeholder="输入版本" required>
+					</div>
+					<div class="col-md-12" style="margin-top:10px;">
+						<lable class="control-label">描述:</lable>
+						<textarea class="form-control" ng-model="formData.description" required/>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<div class="modal-footer">
+		<button class="btn btn-primary" ng-click="ok()" ng-disabled="entAddForm.$invalid">新增</button>
+		<button class="btn btn-warning" ng-click="cancel()">取消</button>
+	</div>
+</div>
+

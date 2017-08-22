@@ -1,0 +1,14 @@
+<div class="div-inside" ng-controller="SidenavController">
+	<form class="col-md-12" style="margin-top:10px;" name="addEntForm" novalidate>
+		<p class="control-label"><strong><h3>新增企业:</h3></strong></p>
+		<div class="form-group">
+			<lable class="control-label">企业版本号:</lable>
+			<input type = "number" class="form-control" ng-model="sideData.enterprise_number" placeholder="企业版本号" required>
+			<lable class="control-label">企业名称:</lable>
+			<input class="form-control" ng-model="sideData.enterprise_name" placeholder="企业名称" required>
+			<lable class="control-label">项目负责人:</lable>
+			<input class="form-control" ng-model="sideData.manager" placeholder="项目负责人" required>
+	    </div>
+	</from>
+	<a href="" ng-click="add_ent()" ng-disabled="addEntForm.$invalid"><span class="fa fa-pencil" style="margin-right:10px;margin-top:20px"></span><b>新增</b></a>
+</div>

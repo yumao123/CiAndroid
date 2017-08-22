@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+import os
+import sys
+
+def init_env(project_name):
+	pwd = os.getcwd()
+
+	# makedirs
+	init_paths = ['support', 'custom_page', 'testcase', 'data', 'capture', 'report']
+	for path in init_paths:
+		os.makedirs('{0}\{1}\{2}'.format(pwd, project_name, path))
+
+
+if __name__ == '__main__':
+
+	if len(sys.argv) <= 1:
+		raise Exception("Usage: dagger_manager.py <your project name>")
+	else:
+		project_name = sys.argv[1]
+
+	init_env(project_name)
+

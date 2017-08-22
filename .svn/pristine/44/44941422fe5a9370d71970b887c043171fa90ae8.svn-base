@@ -1,0 +1,714 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from models import db_session, Base, orm_paginate
+from sqlalchemy import Column, String, Integer
+from app.ext.util import to_unicode
+
+class EntModule(Base):
+
+    __tablename__ = 'ci_tb_enterprise'
+
+    id                  = Column(Integer, primary_key = True)
+    enterprise_name     = Column(String(32))
+    enterprise_number   = Column(Integer)
+    last_buildTime      = Column(String(32))
+    manager             = Column(String(32))
+
+    def __repr__(self):
+        return '<Enterprise name %r>' % self.enterprise_name
+
+    def __init__(self, init_enterprise):
+        self.enterprise_name    = init_enterprise['enterprise_name']
+        self.enterprise_number  = init_enterprise['enterprise_number']
+        self.last_buildTime     = ' '
+        self.manager            = init_enterprise['manager'] if init_enterprise['manager'] is not None else ' '
+
+    @classmethod
+    def get_enterprise_list(cls, page, per_page):
+        enterprise_list = []
+        #get item_info
+        session = db_session()
+        try:
+            paginate = orm_paginate(session.query(EntModule).order_by(EntModule.enterprise_number), page, per_page)
+
+            for enterprise_info in paginate:
+                enterprise_list.append(cls.to_json(enterprise_info))
+            return enterprise_list
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_enterprise_count(cls):
+        session = db_session()
+        try:
+            length = len(session.query(EntModule).all())
+            return length
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+        
+
+    @classmethod
+    def add_enterprise(cls, enterprise_info):
+        session = db_session()
+        try:
+            enterprise_info = to_unicode(enterprise_info)
+            if session.query(EntModule).filter_by(enterprise_number= enterprise_info["enterprise_number"]).first() is not None:
+                raise AttributeError("Enterprise is already exists!")
+            else:
+                enterprise = EntModule(enterprise_info)
+                session.add(enterprise)
+                session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def delete_enterprise(cls, enterprise_number):
+        enterprise = None
+        session = db_session()
+        try:
+            enterprise = session.query(EntModule).filter_by(enterprise_number= enterprise_number).first()
+            if enterprise is None:
+                raise AttributeError("Enterprise is not exists!")
+            else:
+                session.delete(enterprise)
+                session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def to_json(cls, enterprise_info):
+        return {
+            'enterprise_name':      enterprise_info.enterprise_name,
+            'enterprise_number':    enterprise_info.enterprise_number,
+            'last_buildTime':       enterprise_info.last_buildTime,
+            'manager':              enterprise_info.manager,
+        }
+
+
+class ConfigureSettingModule(Base):
+
+    __tablename__ = 'ci_tb_configure_setting'
+
+    id                  = Column(Integer, primary_key = True)
+    android_or_ios      = Column(String(32))
+    file_nick_name      = Column(String(32))
+    file_type           = Column(String(32))
+    value_type          = Column(String(32))
+    file_relative_path  = Column(String(64))
+    description         = Column(String(32))
+    isshow              = Column(String(32))
+    file_items          = Column(String(1024))
+
+    def __init__(self, init_info):
+        self.android_or_ios = init_info['android_or_ios']
+        self.file_nick_name = init_info['file_nick_name']
+        self.file_type      = init_info['file_type']
+        self.value_type     = init_info['value_type'] if init_info.has_key('value_type') else ' '
+        self.file_relative_path = init_info['file_relative_path']
+        self.description    = init_info['description']
+        self.isshow         = init_info['isshow']
+        self.file_items     = init_info['file_items'] if init_info.has_key('file_items') else '[]'
+
+
+    def __repr__(self):
+        return '<file_nick_name %r>' % self.file_nick_name
+
+
+    @classmethod
+    def get_configureInfo(cls, android_or_ios):
+        config_list = []
+        session = db_session()
+        try:
+            configs = session.query(ConfigureSettingModule).filter_by(android_or_ios = android_or_ios).all()
+            for config in configs:
+                config_list.append(cls.to_json(config))
+            return config_list
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+        
+
+    @classmethod
+    def get_all_configureInfo(cls, page, per_page):
+        config_list = []
+        session = db_session()
+        try:
+            paginate = orm_paginate(session.query(ConfigureSettingModule).order_by(ConfigureSettingModule.id.desc()), page, per_page)
+
+            for config in paginate:
+                config_list.append(cls.to_json(config))
+            return config_list
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_current_switch(cls, file_nick_name):
+        session = db_session()
+        try:
+            file_nick_name = to_unicode(file_nick_name)
+            config = session.query(ConfigureSettingModule).filter_by(file_nick_name = file_nick_name).first()
+            return cls.to_json(config)
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def modify_switch(cls, file_nick_name, file_items):
+        session = db_session()
+        try:
+            file_nick_name = to_unicode(file_nick_name)
+            config = session.query(ConfigureSettingModule).filter_by(file_nick_name = file_nick_name)
+            if config is None:
+                raise AttributeError("The file_nick_name is invalid!")
+            config.update(
+                    {
+                        'file_items': str(file_items),
+                    }
+                )
+            session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def add_config_file(cls, config_file):
+        config_file = to_unicode(config_file)
+        session = db_session()
+        try:
+            if config_file.has_key('value_type') is False:
+                config_file['value_type'] = ' '
+            if session.query(ConfigureSettingModule).filter_by(file_nick_name= config_file["file_nick_name"]).first() is not None:
+                raise AttributeError("File is already exists!")
+            else:
+                config = ConfigureSettingModule(config_file)
+                session.add(config)
+                session.commit()         
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def delete_config_file(cls, file_nick_name):
+        session = db_session()
+        config_file = None
+        try:
+            file_nick_name = to_unicode(file_nick_name)
+            config_file = session.query(ConfigureSettingModule).filter_by(file_nick_name= file_nick_name).first()
+            if config_file is None:
+                raise AttributeError("File is not exists!")
+            else:
+                session.delete(config_file)
+                session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_config_count(cls):
+        session = db_session()
+        try:
+            return len(session.query(ConfigureSettingModule).all())
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def to_json(cls, config):
+        return {
+            'android_or_ios':       config.android_or_ios,
+            'file_nick_name':       config.file_nick_name,
+            'file_type':            config.file_type,
+            'value_type':           config.value_type,
+            'file_relative_path':   config.file_relative_path,
+            'description':          config.description,
+            'isshow':               config.isshow,
+            'file_items':           config.file_items and eval(config.file_items) or [],
+        }
+
+
+class EnterpriseInfoModule(Base):
+
+    __tablename__ = 'ci_tb_enterprise_info'
+
+    id              = Column(Integer, primary_key = True)
+    is_enterprise   = Column(String(32))
+    is_changeLogo   = Column(String(32))
+    is_upload       = Column(String(32))
+    enterprise_number = Column(Integer)
+    short_name      = Column(String(32))
+    build_number    = Column(Integer)
+    release_number  = Column(Integer)
+    extend_property = Column(String(1024))
+    code_url        = Column(String(64))
+    gateway_mode    = Column(String(32))
+
+
+    def __init__(self, enterprise_number):
+        self.enterprise_number  = enterprise_number
+        self.is_enterprise      = None
+        self.is_changeLogo      = None
+        self.is_upload          = None
+        self.short_name         = None
+        self.build_number       = None
+        self.release_number     = None
+        self.extend_property    = None
+        self.code_url           = None
+        self.gateway_mode       = None
+
+
+    @classmethod
+    def get_enterprise_info(cls, enterprise_number):
+        session = db_session()
+        try:
+            enterprise_info = session.query(EnterpriseInfoModule).filter_by(enterprise_number = enterprise_number).first()
+            return cls.to_json(enterprise_info)
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def initialize_enterprise_info(cls, enterprise_number):
+        session = db_session()
+        try:
+            if session.query(EnterpriseInfoModule).filter_by(enterprise_number= enterprise_number).first() is not None:
+                raise AttributeError("Enterprise is already exists!")
+            else:
+                enterprise = EnterpriseInfoModule(enterprise_number)
+                session.add(enterprise)
+                session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def modify_enterprise_info(cls, enterprise_info):
+        enterprise = None
+        session = db_session()
+        #修改企业信息
+        try:
+            enterprise = session.query(EnterpriseInfoModule).filter_by(enterprise_number= enterprise_info.enterprise_number)
+            if enterprise is None:
+                raise AttributeError("Enterprise is not exists!")
+            else:
+                enterprise.update(
+                        {
+                            'is_enterprise' : enterprise_info.is_enterprise,
+                            'is_changeLogo' : enterprise_info.is_changeLogo,
+                            'is_upload'     : enterprise_info.is_upload,
+                            'short_name'    : enterprise_info.short_name,
+                            'build_number'  : enterprise_info.build_number,
+                            'release_number': enterprise_info.release_number,
+                            'extend_property': str(enterprise_info.extend_property),
+                            'code_url'      : enterprise_info.code_url,
+                            'gateway_mode'  : enterprise_info.gateway_mode,
+                        }
+                    )
+                session.commit()
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def delete_enterprise_info(cls, enterprise_number):
+        enterprise = None
+        session = db_session()
+        try:
+            enterprise = session.query(EnterpriseInfoModule).filter_by(enterprise_number= enterprise_number).first()
+            if enterprise is None:
+                raise AttributeError("Enterprise is not exists!")
+            else:
+                session.delete(enterprise)
+                session.commit()
+        except Exception, e:
+            #todo...
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def to_json(cls, enterprise_info):
+        return {
+            'is_enterprise':        enterprise_info.is_enterprise,
+            'is_changeLogo':        enterprise_info.is_changeLogo,
+            'is_upload':            enterprise_info.is_upload,
+            'enterprise_number':    enterprise_info.enterprise_number,
+            'short_name':           enterprise_info.short_name,
+            'build_number':         enterprise_info.build_number,
+            'release_number':       enterprise_info.release_number,
+            'extend_property':      enterprise_info.extend_property and eval(enterprise_info.extend_property) or None,
+            'code_url':             enterprise_info.code_url,
+            'gateway_mode':         enterprise_info.gateway_mode,
+        }
+
+
+
+class IpModule(Base):
+
+    __tablename__ = 'ci_tb_ip_info'
+
+    id                          = Column(Integer, primary_key = True)
+    enterprise_number           = Column(Integer)
+    gateway_mode                = Column(String(16))
+    BESTENTERPRISESERVERS_IP    = Column(String(32))
+    BESTENTERPRISESERVERS_IP_1  = Column(String(32))
+    SERVER_IP                   = Column(String(32))
+    ENTERPRICE_IP               = Column(String(32))
+    SERVER_PORT                 = Column(Integer)
+    ENTERPRICE_PORT             = Column(Integer)
+    MULTI_SERVER                = Column(String(8))
+    isFuzai                     = Column(String(8))
+
+    def __init__(self, enterprise_info):
+        self.enterprise_number          = enterprise_info.enterprise_number
+        self.gateway_mode               = enterprise_info.gateway_mode
+        self.BESTENTERPRISESERVERS_IP   = enterprise_info.BESTENTERPRISESERVERS_IP
+        self.BESTENTERPRISESERVERS_IP_1 = enterprise_info.BESTENTERPRISESERVERS_IP_1
+        self.SERVER_IP                  = enterprise_info.SERVER_IP
+        self.ENTERPRICE_IP              = enterprise_info.ENTERPRICE_IP
+        self.SERVER_PORT                = enterprise_info.SERVER_PORT
+        self.ENTERPRICE_PORT            = enterprise_info.ENTERPRICE_PORT
+        self.MULTI_SERVER               = enterprise_info.MULTI_SERVER
+        self.isFuzai                    = enterprise_info.isFuzai
+
+
+    @classmethod
+    def modify_ip_info(cls, enterprise_info):
+        ip_info = None
+        session = db_session()
+        try:
+            ip_info = session.query(IpModule).filter_by(enterprise_number = enterprise_info.enterprise_number, gateway_mode = enterprise_info.gateway_mode).first()
+            if ip_info is None:
+                #若无,则新增该企业ip
+                IpInfo = IpModule(enterprise_info)
+                session.add(IpInfo)
+                session.commit()
+            else:
+                #若有,则修改该企业ip
+                ip_info = session.query(IpModule).filter_by(enterprise_number = enterprise_info.enterprise_number, gateway_mode = enterprise_info.gateway_mode)
+                ip_info.update(
+                        {
+                            'BESTENTERPRISESERVERS_IP':     enterprise_info.BESTENTERPRISESERVERS_IP,
+                            'BESTENTERPRISESERVERS_IP_1':   enterprise_info.BESTENTERPRISESERVERS_IP_1,
+                            'SERVER_IP':                    enterprise_info.SERVER_IP,
+                            'ENTERPRICE_IP':                enterprise_info.ENTERPRICE_IP,
+                            'SERVER_PORT':                  enterprise_info.SERVER_PORT,
+                            'ENTERPRICE_PORT':              enterprise_info.ENTERPRICE_PORT,
+                            'MULTI_SERVER':                 enterprise_info.MULTI_SERVER,
+                            'isFuzai':                      enterprise_info.isFuzai,
+                        }
+                    )
+                session.commit() 
+        except Exception, e:
+            return 'Modify ip information error:{0}'.format(e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_ip_info(cls, enterprise_number):
+        ip_info = []
+        session = db_session()
+        try:
+            enterprise_ip_info_list = session.query(IpModule).filter_by(enterprise_number = enterprise_number).all()
+            for ent_ip in enterprise_ip_info_list:
+                ip_info.append(cls.to_json(ent_ip))
+            system_ip_info_list = session.query(IpModule).filter_by(enterprise_number = 6).all()
+            for sys_ip in system_ip_info_list:
+                ip_info.append(cls.to_json(sys_ip))
+            return ip_info
+        except Exception, e:
+            return 'Get ip information error:{0}'.format(e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def to_json(cls, ip_info):
+        return {
+            'gateway_mode': ip_info.gateway_mode,
+            'gateway_info': {
+                'BESTENTERPRISESERVERS_IP':             ip_info.BESTENTERPRISESERVERS_IP,
+                'BESTENTERPRISESERVERS_IP_1':           ip_info.BESTENTERPRISESERVERS_IP_1,
+                'SERVER_IP':            ip_info.SERVER_IP,
+                'ENTERPRICE_IP':        ip_info.ENTERPRICE_IP,
+                'SERVER_PORT':          ip_info.SERVER_PORT,
+                'ENTERPRICE_PORT':      ip_info.ENTERPRICE_PORT,
+                'MULTI_SERVER':         ip_info.MULTI_SERVER,
+                'isFuzai':              ip_info.isFuzai,
+            }
+        }
+
+
+class BuildHistoryModule(Base):
+
+    __tablename__ = 'ci_tb_build_history'
+
+    id                  = Column(Integer, primary_key = True)
+    enterprise_name     = Column(String(32))
+    enterprise_number   = Column(Integer)
+    package_type        = Column(String(32))
+    package_name        = Column(String(32))
+    download_url        = Column(String(64))
+    operation_time      = Column(String(64))
+    operation_status    = Column(Integer)
+    code_version        = Column(Integer)
+    code_url            = Column(String(64))
+    error_info          = Column(String(512))
+
+    def __init__(self, enterprise_info):
+        self.enterprise_name    = enterprise_info.enterprise_name
+        self.enterprise_number  = enterprise_info.enterprise_number
+        self.package_type       = enterprise_info.os_mode
+        self.operation_time     = enterprise_info.start_time_stamp
+        self.operation_status   = 0
+        self.code_version       = enterprise_info.code_version
+        self.code_url           = enterprise_info.code_url
+        self.error_info         = None
+
+
+    @classmethod
+    def add_history(cls, enterprise_info):
+        session = db_session()
+        err = None
+        #插入一条历史记录
+        try:
+            history = BuildHistoryModule(enterprise_info)
+            session.add(history)
+            session.commit()
+            #获取该记录的id
+            last_history = session.query(BuildHistoryModule).order_by(BuildHistoryModule.id.desc()).first()
+            return last_history.id, True
+        except Exception, e:
+            err = 'Add history failed:{0}'.format(e)
+            return err, False
+        finally:
+            session.close()
+
+
+    @classmethod
+    def modify_history(cls, status_info):
+        history         = None
+        id              = status_info.get('id')
+        package_name    = status_info.get('package_name')
+        download_url    = status_info.get('download_url')
+        status          = status_info.get('status')
+        error_info      = status_info.get('error_info')
+        session         = db_session()
+
+        try:
+            history = session.query(BuildHistoryModule).filter_by(id= id)
+            if history is None:
+                raise AttributeError("History is not exists!")
+            else:
+                history.update(
+                        {
+                            'package_name':     package_name,
+                            'download_url':     download_url,
+                            'operation_status': status,
+                            'error_info':       error_info,
+                        }
+                    )
+                session.commit()
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+        
+
+    @classmethod
+    def get_history_list(cls, page, per_page):
+        history_list = []
+        session = db_session()
+        try:
+            paginate = orm_paginate(session.query(BuildHistoryModule).order_by(BuildHistoryModule.id.desc()), page, per_page)
+
+            for history_info in paginate:
+                history_list.append(cls.to_json(history_info))
+
+            return history_list
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_history_count(cls):
+        session = db_session()
+        try:
+            length = len(session.query(BuildHistoryModule).all())
+            return length
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def to_json(cls, history_info):
+        return {
+            'enterprise_name':      history_info.enterprise_name,
+            'enterprise_number':    history_info.enterprise_number,
+            'package_type':         history_info.package_type,
+            'package_name':         history_info.package_name,
+            'download_url':         history_info.download_url,
+            'operation_time':       history_info.operation_time,
+            'operation_status':     history_info.operation_status,
+            'code_version':         history_info.code_version,
+            'code_url':             history_info.code_url,
+            'error_info':           history_info.error_info,
+        }
+
+
+class RepositoryModule(Base):
+
+    __tablename__ = 'ci_tb_local_repository'
+
+    id              = Column(Integer, primary_key = True)
+    code_url        = Column(String(64))
+    code_version    = Column(Integer)
+    description     = Column(String(32))
+    issuccess       = Column(Integer)
+
+
+    def __init__(self, cache_info):
+        self.code_url       = cache_info.code_url
+        self.code_version   = cache_info.code_version
+        self.description    = cache_info.description
+        self.issuccess      = 0
+
+
+    @classmethod
+    def get_all_repository(cls, page, per_page):
+        config_list = []
+        session = db_session()
+        try:
+            paginate = orm_paginate(session.query(RepositoryModule).order_by(RepositoryModule.id.desc()), page, per_page)
+            for rep in paginate:
+                config_list.append(cls.to_json(rep))
+            return config_list
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def add_repository(cls, cache_info):
+        session = db_session()
+        #插入一条历史记录
+        try:
+            repository = RepositoryModule(cache_info)
+            session.add(repository)
+            session.commit()
+            #获取该记录的id
+            last_repository = session.query(RepositoryModule).order_by(RepositoryModule.id.desc()).first()
+            return last_repository.id
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+        
+
+    @classmethod
+    def modify_repository(cls, id=None, issuccess=None):
+        repository = None
+        session = db_session()
+        try:
+            repository = session.query(RepositoryModule).filter_by(id= id)
+            if repository is None:
+                raise AttributeError("Repository is not exists!")
+            else:
+                repository.update(
+                        {
+                            'issuccess': issuccess,
+                        }
+                    )
+                session.commit()
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def check_repository_exist(cls, code_url, code_version):
+        ret = 0
+        session = db_session()
+        try:
+            repository = session.query(RepositoryModule).filter_by(code_url= code_url, code_version= code_version).first()
+            if repository is not None:
+                if repository.issuccess == 1:
+                    ret = 1
+            return ret
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_repository_count(cls):
+        session = db_session()
+        try:
+            return len(session.query(RepositoryModule).all())
+        except Exception, e:
+            return '{0}:{1}'.format(type(e), e)
+        finally:
+            session.close()
+
+
+
+    @classmethod
+    def to_json(cls, rep):
+        return {
+            'code_url':         rep.code_url,
+            'code_version':     rep.code_version,
+            'description':  rep.description,
+            'issuccess':    rep.issuccess,
+        }

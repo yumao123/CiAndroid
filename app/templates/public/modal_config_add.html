@@ -1,0 +1,53 @@
+<div>
+	<div class="modal-header">
+		<h4>{{modal_info.modal_name}}</h4>
+	</div>
+	<div class="modal-body">
+		<div class="box box-primary">
+			<div class="box-header with-border">
+				<p class="box-title">
+
+				</p>
+			</div>
+			<form name="fileAddForm">
+				<div class="box-body">
+					<div class="col-md-6">
+						<p class="control-label">文件缩写:</p>
+						<input class="form-control" required ng-model="formData.file_nick_name">
+						<p class="control-label">所属系统:</p>
+						<select class="form-control" ng-model="formData.android_or_ios" required>
+							<option value="android">android</option>
+							<option value="ios">ios</option>
+						</select>
+					</div>
+					<div class="col-md-6">
+						<p class="control-label">项目相对路径:</p>
+						<input class="form-control" required ng-model="formData.file_relative_path">
+						<p class="control-label">文件类型:</p>
+						<select class="form-control" ng-model="formData.file_type" required>
+							<option value="xml">xml</option>
+							<option value="file">file</option>
+							<option value="plist">plist</option>
+						</select>
+					</div>
+					<div class="col-md-6">
+						<p class="control-label">是否展示:</p>
+						<select class="form-control" ng-model="formData.isshow" required>
+							<option value="true">展示</option>
+							<option value="false">隐藏</option>
+						</select>
+					</div>
+					<div class="col-md-12">
+						<p class="control-label">备注:</p>
+						<textarea class="form-control" style="height: 100px;resize: none;" ng-model="formData.description" required/>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+	<div class="modal-footer">
+		<button class="btn btn-primary" ng-click="ok()" ng-disabled="fileAddForm.$invalid">新增</button>
+		<button class="btn btn-warning" ng-click="cancel()">取消</button>
+	</div>
+</div>
+

@@ -1,0 +1,9 @@
+setup.py
+dagger/__init__.py
+dagger/browser_emulator.py
+dagger/common.py
+dagger.egg-info/PKG-INFO
+dagger.egg-info/SOURCES.txt
+dagger.egg-info/dependency_links.txt
+dagger.egg-info/top_level.txt
+test/test_dagger.py

@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from . import api
+from flask import render_template, flash, request, redirect, url_for, session, jsonify, abort, make_response
+from models.system import SystemModule
+from models.enterprise import EntModule, BuildHistoryModule, ConfigureSettingModule, RepositoryModule
+from app.ext.backstage_manager import get_template
+import os
+import json
+import re
+import chardet
+
+from build_script import config
+
+@api.route('/get_tableTitle', methods=['GET', 'POST'])
+def get_tableTitle():
+	if request.method == 'POST':
+		request_args = json.loads(request.get_data())
+		if request_args.has_key('item_name'):
+			item_name = request_args.get('item_name')
+			item_info = SystemModule.get_itemInfo(item_name)
+			if item_info:
+				return make_response(jsonify(eval(item_info)), 200)
+			return make_response(jsonify({'result': 'err!'}), 400)
+		else:
+			abort(404)
+
+
+@api.route('/stop_package', methods=['GET', 'POST'])
+def stop_package():
+	if request.method == 'POST':
+		# 请求重启
+		import requests
+		from build_script.config import BUILD_SERVER, BUILD_API
+		req_url = BUILD_SERVER + BUILD_API['STOP_PACKAGE']
+		req = requests.post(req_url)
+		abort(404)
+
+
+
+@api.route('/get_tableInfo', methods=['GET', 'POST'])
+def get_tableInfo():
+	pageIndex = 0
+	pageSize = 10
+	enterprise_list = []
+	ret_json = {}
+
+	if request.method == 'POST':
+		request_args = json.loads(request.get_data())
+		if request_args.has_key('item_name'):
+			pageIndex = request_args.get('pageIndex')
+			pageSize = request_args.get('pageSize')
+			keyword = request_args.get('keyword')
+			if request_args.get('item_name') == 'buildAndroidModule':
+				data_list = EntModule.get_enterprise_list(pageIndex, pageSize, keyword)
+				count = EntModule.get_enterprise_count()
+
+			elif request_args.get('item_name') == 'buildConfigModule':
+				data_list = ConfigureSettingModule.get_all_configureInfo(pageIndex, pageSize)
+				count = ConfigureSettingModule.get_config_count()
+
+			elif request_args.get('item_name') == 'repositoryModule':
+				data_list = RepositoryModule.get_all_repository(pageIndex, pageSize)
+				count = RepositoryModule.get_repository_count()
+
+			ret_json = {'count': count, 'data_list': data_list}
+			return jsonify(ret_json)
+		else:
+			abort(404)
+
+
+@api.route('/template/<modal_content>', methods=['GET', 'POST'])
+def modal_content(modal_content):
+	if request.method == 'GET':
+		return render_template(get_template(modal_content, 'public'))
+
+
+@api.route('/get_code_version', methods=['GET', 'POST'])
+def get_code_version():
+	if request.method == 'POST':
+		request_args = json.loads(request.get_data())
+		code_url = request_args.get('code_url')
+
+		if 'git' in code_url:
+			pass
+		else:
+			if isinstance(code_url, unicode):
+				code_url = code_url.encode("utf-8")
+			cmd = 'svn info {code_url} --username {username} --password {password} --no-auth-cache'.format(
+					code_url= code_url, username= config.SVN_USER_NAME, password= config.SVN_PASSWORD
+				)
+			result = os.popen(cmd).read().decode('utf-8')
+			regex = re.compile(r'%s: (.*)' % u'Last Changed Rev')
+			if regex.search(result) is not None:
+				code_version = regex.search(result).group(1)
+				return jsonify({"code_version": code_version})
+			return make_response(jsonify({"result": 'code_url is not exist!'}), 400)

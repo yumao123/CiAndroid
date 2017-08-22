@@ -1,0 +1,427 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from . import api
+from flask import Flask, render_template, redirect, url_for, request, jsonify, send_from_directory, Response, make_response
+from models.enterprise import BuildHistoryModule, EnterpriseInfoModule, IpModule, EntModule, ConfigureSettingModule
+from app.ext.util import to_unicode
+from build_script.config import HTML_SERVER
+import chardet
+import sys
+import requests
+import json
+import paramiko
+import re
+import os
+import codecs
+
+@api.route('/get_history_tableInfo', methods=['GET', 'POST'])
+def get_history_tableInfo():
+	pageIndex = 0
+	pageSize = 10
+	history_list = []
+	ret_json = {}
+
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		if request_args.has_key('item_name'):
+			if request_args.get('item_name') == 'buildHistoryModule':
+				pageIndex = request_args.get('pageIndex')
+				pageSize = request_args.get('pageSize')
+
+				history_list = BuildHistoryModule.get_history_list(pageIndex, pageSize)
+				history_count = BuildHistoryModule.get_history_count()
+				ret_json = {'count': history_count, 'history_list': history_list}
+				return jsonify(ret_json)
+		else:
+			abort(404)
+
+
+@api.route('/get_enterprise_info', methods=['GET', 'POST'])
+def get_enterprise_info():
+	enterprise_info = None
+	ip_info = None
+	all_info = {}
+
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		if request_args.has_key('enterprise_number'):
+			enterprise_number = request_args['enterprise_number']
+
+			enterprise_info = EnterpriseInfoModule.get_enterprise_info(enterprise_number)
+			ip_info = IpModule.get_ip_info(enterprise_number)
+			all_info = {"enterprise_info": enterprise_info, "ip_info": ip_info}
+			return jsonify(all_info)
+		else:
+			abort(404)
+
+
+@api.route('/add_enterprise', methods=['GET', 'POST'])
+def add_enterprise():
+
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		enterprise_number = request_args['enterprise_number']
+		enterprise_name = request_args['enterprise_name']
+		manager = request_args.has_key('manager') and request_args['manager'] or None
+		
+		enterprise_info = {"enterprise_number": enterprise_number, "enterprise_name": enterprise_name, "manager": manager}
+		EnterpriseInfoModule.initialize_enterprise_info(enterprise_number)
+		ret = EntModule.add_enterprise(enterprise_info)
+		if ret is not None:
+			return make_response(jsonify({"result": ret}), 400)
+		else:
+			return make_response(jsonify({"result": '新增成功!'}), 200)
+
+
+@api.route('/delete_enterprise', methods=['GET', 'POST'])
+def delete_enterprise():
+
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		enterprise_number = request_args['enterprise_number']	
+
+		ret = EnterpriseInfoModule.delete_enterprise_info(enterprise_number)
+		ret = EntModule.delete_enterprise(enterprise_number)
+		if ret is not None:
+			return make_response(jsonify({"result": ret}), 400)
+		else:
+			return make_response(jsonify({"result": '新增成功!'}), 200)
+
+
+@api.route('/get_file_info', methods=['GET', 'POST'])
+def get_file_info():
+	"""
+		获取
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		download_url = request_args['download_url']
+		from build_script.config import PACKAGE_REPROSITORY, DOWNLOAD_URL
+		staticDir = download_url.split(PACKAGE_REPROSITORY)[1]
+		download_url = DOWNLOAD_URL + staticDir
+		return jsonify({"download_url": download_url})
+	else:
+		abort(404)
+
+
+@api.route('/get_config_info', methods=['GET', 'POST'])
+def get_config_info():
+	"""
+		获取配置文件存档详情,用于开关设置>查看开关文件
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		android_or_ios = request_args['android_or_ios']
+		configInfo = ConfigureSettingModule.get_configureInfo(android_or_ios)
+		return jsonify({"configInfo": configInfo})
+	else:
+		abort(404)
+
+
+@api.route('/get_current_switch', methods=['GET', 'POST'])
+def get_current_switch():
+	"""
+		获取配置文件存档,用于开关设置>查看开关文件
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		file_nick_name = request_args['file_nick_name']
+		configInfo = ConfigureSettingModule.get_current_switch(file_nick_name)
+		return jsonify({"configInfo": configInfo})
+	else:
+		abort(404)
+
+
+@api.route('/modify_switch', methods=['GET', 'POST'])
+def modify_swith():
+	"""
+		修改配置文件存档,用于开关设置>编辑开关文件
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		file_items = request_args['modify_switch']
+		file_nick_name = request_args['file_nick_name']
+		err = ConfigureSettingModule.modify_switch(file_nick_name, file_items)
+		if err is None:
+			return make_response(jsonify({"result": '新增成功!'}), 200)
+		else:
+			return make_response(jsonify({"result": 'err!'}), 400)
+	else:
+		abort(404)
+
+
+@api.route('/add_config_file', methods=['GET', 'POST'])
+def add_config_file():
+	"""
+		新增配置文件存档,用于开关设置>新增开关文件
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		config_file = request_args['add_config_file']
+		err = ConfigureSettingModule.add_config_file(config_file)
+		if err is None:
+			return make_response(jsonify({"result": '新增成功!'}), 200)
+		else:
+			return make_response(jsonify({"result": 'err!'}), 400)
+	else:
+		abort(404)
+
+
+@api.route('/delete_config_file', methods=['GET', 'POST'])
+def delete_config_file():
+	"""
+		清空配置文件存档,用于开关设置>删除此配置
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_args = eval(request.data)
+		file_nick_name = request_args['file_nick_name']
+		err = ConfigureSettingModule.delete_config_file(file_nick_name)
+		if err is None:
+			return make_response(jsonify({"result": '删除成功!'}), 200)
+		else:
+			return make_response(jsonify({"result": 'err!'}), 400)
+	else:
+		abort(404)
+
+
+from build_script.config import BUILD_SERVER, BUILD_API
+@api.route('/building', methods=['GET', 'POST'])
+def building():
+	"""
+		打包请求,主要功能由打包服务提供,这里只负责通知打包服务
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_data = eval(request.data)
+		# 请求打包
+		req_url = BUILD_SERVER + BUILD_API['ASK_FOR_BUILD']
+		data = json.dumps(request_data, ensure_ascii=False)
+		req = requests.post(req_url, data=data)
+		return make_response(jsonify({"result": '开始打包!'}), 200)
+
+
+
+@api.route('/get_process', methods=['GET', 'POST'])
+def get_process():
+	"""
+		获取进度条,主要功能由打包服务提供,这里只负责通知打包服务
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		# 请求进度
+		req_url = BUILD_SERVER + BUILD_API['GET_PROCESS']
+		req = requests.get(req_url)
+		return make_response(req.text, 200)
+
+
+#获取日志服务
+@api.route('/get_log', methods=['GET', 'POST'])
+def get_log():
+	"""
+		获取日志,主要功能由打包服务提供,这里只负责通知打包服务
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_data = eval(request.data)
+		req_url = BUILD_SERVER + BUILD_API['GET_LOG']
+		data = json.dumps(request_data, ensure_ascii=False)
+		req = requests.post(req_url, data=data)
+		return make_response(req.text, 200)
+
+
+@api.route('/upload_package', methods=['GET', 'POST'])
+def upload_package():
+	"""
+		上传安装包,主要功能由打包服务提供,这里只负责通知打包服务
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		request_data = eval(request.data)
+		req_url = BUILD_SERVER + BUILD_API['UPLOAD_PACKAGE']
+		data = json.dumps(request_data, ensure_ascii=False)
+		req = requests.post(req_url, data=data)
+		return make_response(req.text, 200)
+
+
+def check_client_name(update_url):
+	"""
+		- 通过远程访问地址获取客户缩写以及html文件名称
+		- Author: cpu
+		- Args:
+			- update_url：远程访问地址
+		- Returns: 
+			- client_name：客户缩写
+			- html：html文件名
+		- Modify
+			- 2017-01-03: 修改html远程地址
+
+	"""
+	try:
+		# 通过html直接访问
+		if update_url.endswith('.html') or update_url.endswith('.htm'):
+			if re.search('.*\/(.*)$', update_url):
+				return update_url.split("/")[-2], update_url.split("/")[-1]
+		else:
+			if re.search('.*\/(.*)/$', update_url):
+				#表示后面有/
+				return update_url.split("/")[-2], "index.html"
+			elif re.search('.*\/(.*)$', update_url):
+				#否则后面没有/
+				return update_url.split("/")[-1], "index.html"
+	except AttributeError:
+		return None
+
+
+
+@api.route('/get_html', methods=['GET', 'POST'])
+def get_html():
+	"""
+		获取远程html文件至本地,且将html文件内容发送给前端
+		- Author: cpu
+		- Args:
+		- Returns:
+		- Modify
+			- 2017-01-03: 修改html远程地址
+
+	"""
+	err = None
+	if request.method == 'POST':
+		# 请求进度
+		request_data = eval(request.data)
+		update_url = request_data['updateUrl']
+		# 获取企业缩写
+		_client_name, _html = check_client_name(update_url)
+		if _client_name is None:
+			err = 'Enterprise folder is not exists'
+			return make_response(jsonify({"result": err}), 400) 
+		# ssh下载文件
+		sftp_conn_handle = paramiko.Transport((HTML_SERVER['hostname'], HTML_SERVER['port']))
+		sftp_conn_handle.connect(username= HTML_SERVER['username'], password= HTML_SERVER['password'])
+		sftp = paramiko.SFTPClient.from_transport(sftp_conn_handle)
+		# 重组html地址
+		html_file = '{0}{1}/{2}'.format(HTML_SERVER['dir'], _client_name, _html)
+		sftp.get(html_file, 'index.html' )
+
+		with open('index.html', 'r') as fd:
+			html = fd.read()
+		try:
+			encode = chardet.detect(html)['encoding']
+			if encode == 'GB2312':
+				html = html.decode("GBK")
+		except:
+			pass
+
+		sftp_conn_handle.close()
+		return make_response(jsonify({"html": html}), 200)
+
+
+
+@api.route('/modify_html', methods=['GET', 'POST'])
+def modify_html():
+	"""
+		修改远程html文件,通过前端修改本地html文件,替换目标远程html文件,实现更新html的功能
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+			- 2017-01-03: 
+				1.修改html远程地址;
+				2.覆盖文件后,删除本地index.html文件;
+
+	"""
+	err = None
+	if request.method == 'POST':
+		request_data = eval(request.data)
+		try:
+			html_info = request_data['htmlInfo']
+			update_url = request_data['updateUrl']
+			# 获取企业缩写
+			_client_name, _html = check_client_name(update_url)
+
+			sftp_conn_handle = paramiko.Transport((HTML_SERVER['hostname'], HTML_SERVER['port']))
+			sftp_conn_handle.connect(username= HTML_SERVER['username'], password= HTML_SERVER['password'])
+			sftp = paramiko.SFTPClient.from_transport(sftp_conn_handle)
+			
+			fd = codecs.open("index.html", 'w', "utf_8_sig")
+			fd.write(html_info.decode('utf-8'))
+			fd.close()
+
+			# 重组html地址
+			html_file = '{0}{1}/{2}'.format(HTML_SERVER['dir'], _client_name, _html)
+			sftp.put('index.html', html_file)
+			sftp_conn_handle.close()
+
+			# 清空html文件
+			if os.path.exists("index.html"):
+				os.remove("index.html")
+
+		except KeyError, e:
+			err = 'update url Or html is required'
+		if err:
+			return make_response(jsonify({"result": err}), 400)
+		return make_response(jsonify({"result": '上传成功'}), 200)
+
+
+@api.route('/add_repository', methods=['GET', 'POST'])
+def add_repository():
+	"""
+		新增远程代码从svn保存至本地仓库(不提供git)
+		- Author: cpu
+		- Args:
+		- Returns: 
+		- Modify
+
+	"""
+	if request.method == 'POST':
+		# 请求进度
+		request_data = eval(request.data)
+		req_url = BUILD_SERVER + BUILD_API['CACHE_CODE']
+		data = json.dumps(request_data['repository_info'], ensure_ascii=False)
+		req = requests.post(req_url, data=data)
+		return make_response(req.text, 200)

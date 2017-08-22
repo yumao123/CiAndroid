@@ -1,0 +1,43 @@
+# -*- coding: utf-8 -*-
+
+def setup_module(module):
+	# setup_module before anything in this file
+	pass
+
+def teardown_module(module):
+	# teardown_module after everything in this file
+	pass
+
+class TestCase:
+
+	def setup(self):
+		# setup() before each test method
+		pass
+
+	def teardown(self):
+		# teardown() after each test method
+		pass
+
+	@classmethod
+	def setup_class(cls):
+		# setup_class() before any methods in this class
+		pass
+
+	@classmethod
+	def teardown_class(cls):
+		# teardown_class() after any methods in this class
+		pass
+
+	def test_your_first_test_case(self):
+		# here is your first testcase
+		pass
+
+
+
+
+
+
+
+
+
+

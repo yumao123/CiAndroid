@@ -1,0 +1,29 @@
+<div id="{{modal_info.modal_id}}">
+	<div class="modal-header">
+		<h4>{{modal_info.modal_name}}</h4>
+	</div>
+	<div class="modal-body">
+		<table id="buildHistoryModule" class="table table-bordered table-hover">
+			<thead>
+				<tr>
+					<th ng-repeat="tableInfo in tableInfos">{{tableInfo.label}}</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="history in history_list">
+					<td title="svn地址:{{history.code_url}} 版本:{{history.code_version}}">{{history.enterprise_name}}</td>
+					<td>{{history.enterprise_number}}</td>
+					<td><a href="" ng-click="down_load_apk(history.download_url)">{{history.package_name}}</a></td>
+					<td>{{history.operation_time}}</td>
+					<td><a href="" ng-click="show_log(history.enterprise_number, history.operation_time)" title="查看日志"><span ng-class="history.operation_status == 1 ? 'label label-success' : (history.operation_status == -1 ? 'label label-danger' : (history.operation_status == 0 ? 'label label-info' : (history.operation_status == -2 ? 'label label-warning' : 'label label-default')))">{{history.operation_status | status_convert}}</span></a>
+						<a href="" ng-show="history.operation_status == 0" ng-click="stop_package()"><span class="label label-danger">停止</span></a>						
+						<a href="" ng-show="history.operation_status == 1" ng-click="upload_package(history.package_name, history.download_url)"><span class="label label-primary">上传</span></a>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<tm-pagination conf="paginationConf"></tm-pagination>
+	</div>
+	<div class="modal-footer">
+	</div>
+</div>

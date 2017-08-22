@@ -1,0 +1,62 @@
+/* 页码样式 */
+.page-list .pagination {float:right;}
+.page-list .pagination span {cursor: pointer;}
+.page-list .pagination .separate span{cursor: default; border-top:none;border-bottom:none;}
+.page-list .pagination .separate span:hover {background: none;}
+.page-list .page-total {float:right; margin: 25px 20px;}
+.page-list .page-total input, .page-list .page-total select{height: 26px; border: 1px solid #ddd;}
+.page-list .page-total input {width: 40px; padding-left:3px;}
+.page-list .page-total select {width: 50px;}
+
+/*遮罩层样式*/
+.mask {       
+	position: absolute; top: 0px; filter: alpha(opacity=60); background-color: #777;     
+	z-index: 1002; left: 0px;     
+	opacity:0.5; -moz-opacity:0.5;     
+}
+
+.sidenav{
+	width:0px;
+	margin:0; 
+	height:100%;
+	background-color:#3F4A64;
+	right:0px;
+/*  float:right;*/
+	-moz-box-shadow: 10px 10px 5px 10px #888888;
+	box-shadow: 10px 10px 5px 10px #888888;
+	z-index: 99998;
+	position: absolute;
+}
+
+html, body{
+	margin:0;
+	padding:0;
+	height:100%;
+	width:100%;
+}
+
+.div-inside{
+	color:#FFFFE0;
+	margin-top: 50px;
+}
+.div-inside a{
+	color:white;
+}
+
+.div-inside a:hover{
+	text-decoration:underline;
+}
+
+.close {
+	position:absolute; 
+	top:15px; 
+	left:15px;
+	color: white;
+}
+
+.black-inside{
+	color: #434357;
+}
+
+
+

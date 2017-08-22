@@ -1,0 +1,308 @@
+# -*- coding: utf-8 -*-
+import traceback
+import time
+from dagger.common import GloableSettings
+# from dagger import logger
+from selenium.webdriver.chrome.webdriver import WebDriver as chrome_driver
+from selenium.webdriver.firefox.webdriver import WebDriver as firefox_driver
+from selenium.webdriver.ie.webdriver import WebDriver as ie_driver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as ec
+from dagger.log import create_logger
+
+
+class BrowserEmulator(object):
+
+	def __init__(self):
+		self.debug_log_format = (
+			'[%(levelname)s]%(asctime)s %(name)s:' + '%(message)s'
+		)
+		self.logger_name 	= "Dagger"
+		self.debug 			= True
+		self.logger 		= create_logger(self)
+		self._browser 		= None
+		self._js_executor 	= None
+		self.step_interval 	= GloableSettings.step_interval
+		self.timeout		= GloableSettings.timeout
+		self.trace_stream	= GloableSettings.trace_stream
+		self.capture_screenshort_path = GloableSettings.capture_screenshort_path
+		# 初始化浏览器
+		self._setup_browser_core_type(GloableSettings.browser_core_type)
+		self._js_executor 	= self.browser
+
+		self.logger.info("Started BrowserEmulator")
+
+	def _check_gloable_settings():
+		assert GloableSettings.browser_core_type != "" "Should setting browser_core_type" 
+
+
+	def _setup_browser_core_type(self, type):
+		"""
+		usage:
+			根据浏览器类型，初始化浏览器
+		Args:
+			type:浏览器类型
+			1.谷歌；2.火狐；3.IE
+		Returns:
+			None
+		Raises:
+			Exception
+		"""
+		if type == 1:
+			if GloableSettings.chrome_driver_path == "" or not GloableSettings.chrome_driver_path:
+				raise Exception("Should appoint chrome_driver_path first")
+			self._browser = chrome_driver(GloableSettings.chrome_driver_path)
+			self.logger.info("Using chrome driver")
+			return
+		elif type == 2:
+			self._browser = firefox_driver()
+			self.logger.info("Using firefox driver")
+			return
+		elif type == 3:
+			self._browser = ie_driver(GloableSettings.ie_driver_path)
+			if GloableSettings.ie_driver_path == "" or not GloableSettings.ie_driver_path:
+				raise Exception("Should appoint ie_driver_path first")
+			self.logger.info("Using ie driver")
+			return
+
+		raise Exception("Incorect browser type")
+
+
+	@property
+	def browser(self):
+		return self._browser
+
+	@property
+	def js_executor(self):
+		return self._js_executor
+
+	def open(self, url):
+		"""
+		usage:
+			根据url，通过浏览器打开目标地址
+		Args:
+			url:地址
+			eg:http://www.baidu.com
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		try:
+			self.browser.get(url)
+		except:
+			traceback.print_exc(file=self.trace_stream)
+			self.handle_failure("Failed to open url " + url)
+
+	def click(self, xpath):
+		"""
+		usage:
+			通过xpath，定位元素，且点击
+		Args:
+			xpath:xpath路径
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		self.pause(self.step_interval)
+		self.expect_element_visibleOrNot(True, xpath, self.timeout)
+
+		locate = (By.XPATH, xpath)
+		if ec.element_to_be_clickable(locate)(self.browser):
+			try:
+				self.click_the_clickable(xpath, time.time(), 2.5)
+			except:
+				traceback.print_exc(file=self.trace_stream)
+				self.handle_failure("Failed to click " + xpath)
+			else:
+				self.logger.info("Clicked: " + xpath)
+		else:
+			self.handle_failure("Unable to click " + xpath)
+
+	def click_the_clickable(self, xpath, starttime, timeout):
+		"""
+		usage:
+			通过xpath，点击元素
+			a.若在超时范围内失败，则休眠0.5秒后继续点击，直到超时或成功
+			b.若超时且无成功，则抛出异常
+		Args:
+			xpath:		xpath路径
+			starttime:	执行初始时间戳
+			timeout:	超时(单位秒)
+		Returns:
+			None
+		Raises:
+			Exception
+		"""
+		try:
+			self.browser.find_element_by_xpath(xpath).click()
+		except Exception as e:
+			if time.time() - starttime > timeout:
+				self.logger.info("Element " + xpath + " is unclickable")
+				raise Exception(e)
+			else:
+				self.pause(0.5)
+				self.logger.info("Element " + xpath + " is unclickable, try again")
+				self.click_the_clickable(xpath, starttime, timeout)
+
+
+	def type(self, xpath, text):
+		"""
+		usage:
+			通过xpath，定位元素且输入值
+			a.先清空
+			b.再输入
+		Args:
+			xpath:			xpath路径
+			text:			输入的值
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		self.pause(self.step_interval)
+		self.expect_element_visibleOrNot(True, xpath, self.timeout)
+
+		element = self.browser.find_element_by_xpath(xpath)
+		try:
+			element.clear()
+		except:
+			self.logger.warn("Failed to clear text at " + xpath)
+		try:
+			element.send_keys(text)
+		except:
+			traceback.print_exc(file=self.trace_stream)
+			self.handle_failure("Failed to type " + text + " at " + xpath)
+
+		self.logger.info("Type: " + text + " at: " + xpath)
+
+
+	def expect_element_existOrNot(self, expectExist, xpath, timeout):
+		"""
+		usage:
+			通过xpath，在时间范围内，判断元素存在/不存在
+			An expectation for checking that an element is present on the DOM of a page
+		Args:
+			expectExist:	存在/不存在:True/False
+			xpath:			xpath路径
+			timeout:		超时时间
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		locate = (By.XPATH, xpath)
+		if expectExist:
+			try:
+				WebDriverWait(self.browser ,timeout).until(ec.presence_of_element_located(locate))
+			except:
+				traceback.print_exc(file=self.trace_stream)
+				self.handle_failure("Failed to find element " + xpath)
+		else:
+			self.pause(self.step_interval)
+			try:
+				WebDriverWait(self.browser ,timeout).until_not(ec.presence_of_element_located(locate))
+				self.logger.info("Not found undesired element " + xpath)
+			except:
+				self.handle_failure("Found undesired element " + xpath)
+
+	def expect_element_visibleOrNot(self, expectExist, xpath, timeout):
+		"""
+		usage:
+			通过xpath，在时间范围内，判断元素存在/不存在
+			Visibility means that the element is not only displayed
+			but also has a height and width that is greater than 0.
+		Args:
+			expectExist:	存在/不存在:True/False
+			xpath:			xpath路径
+			timeout:		超时时间
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		locate = (By.XPATH, xpath)
+		if expectExist:
+			try:
+				WebDriverWait(self.browser ,timeout).until(ec.visibility_of_element_located(locate))
+			except:
+				traceback.print_exc(file=self.trace_stream)
+				self.handle_failure("Failed to find element " + xpath)
+		else:
+			self.pause(self.step_interval)
+			try:
+				WebDriverWait(self.browser ,timeout).until_not(ec.visibility_of_element_located(locate))
+				self.logger.info("Not found undesired element " + xpath)
+			except:
+				self.handle_failure("Found undesired element " + xpath)
+
+	def expect_url_content(self, content, starttime, timeout):
+		"""
+		usage:
+			在时间范围内，当前url是否包含content的内容
+		Args:
+			content:		预期url存在的内容
+			starttime:		开始时间
+			timeout:		超时时间
+		Returns:
+			True:表示url里的确含有content的内容
+		Raises:
+			None
+		"""
+		if content not in self.browser.current_url:
+			if time.time() - starttime > timeout:
+				self.logger.error(self.browser.current_url + " is not content " + content)
+				raise Exception(self.browser.current_url + " is not content " + content)
+			else:
+				self.pause(0.5)
+				self.logger.info(self.browser.current_url + " is not content " + content + ",try again")
+				return self.expect_url_content(content, starttime, timeout)
+		else:
+			self.logger.info(self.browser.current_url + " content " + content)
+			return True
+
+	@classmethod
+	def current_url(cls):
+		return self.browser.current_url
+
+	def maximize_window(self):
+		return self.browser.maximize_window()
+
+	@classmethod
+	def pause(cls, sleep_time):
+		"""
+		usage:
+			暂停->sleep
+		Args:
+			sleep_time:时间，单位(秒)
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		time.sleep(sleep_time)
+
+	def close(self):
+		"""
+		usage:
+			关闭浏览器，释放资源
+		Args:
+			None
+		Returns:
+			None
+		Raises:
+			None
+		"""
+		self.browser.close()
+
+	def handle_failure(self, notice):
+		# todo 
+		# 截图
+		png = os.urandom(12) + '.png'
+		file_name = '{0}{1}'.format(self.capture_screenshort_path, png)
+		log = notice + " >> capture screenshort at: " + file_name
+		self.browser.get_screenshot_as_file('{0}{1}'.format(file_name))
+		# 日志
+		raise Exception(log)

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TIMEISMONEYMYFRIEND</title>
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-cache">
+	<meta http-equiv="Cache-control" content="no-cache">
+	<meta http-equiv="Cache" content="no-cache">
+	<meta name="viewport" content="user-scalable=no, width=device-width" />
+	<script data-main="{{ url_for('static', filename='javascripts/main') }}" src="{{ url_for('static', filename='javascripts/require.js') }}"></script>
+	<link rel="stylesheet" type="text/css" href="http://cdn.bootcss.com/bootstrap/3.3.6/css/bootstrap.css">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='stylesheets/qr.css') }}">
+</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-offset-3 col-md-6">
+					<div class="form-horizontal">
+						<span class="heading">楼小三</span>
+						<div class="form-group">
+							<input class="form-control" id="phone" placeholder="注册的手机号">
+							<i class="fa fa-user"></i>
+						</div>
+						<div class="form-group">
+							<button id = "getQr" class="btn btn-default">获取二维码</button>
+						</div>
+						<p><font color="#E5E5E5">注:15秒自动刷新验证码</font></p>
+						<img id="rqSrc" src="{{ url_for('static', filename='images/loading.gif') }}" class="img-rounded" width="200" height="200">
+						<br/>
+						<p><font color="#E5E5E5">For iphones guys</font></p>
+					</div>
+				</div>
+			</div>
+			
+		</div>
+	</body>
+</html>

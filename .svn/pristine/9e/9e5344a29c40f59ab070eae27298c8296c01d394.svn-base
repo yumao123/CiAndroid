@@ -1,0 +1,23 @@
+<div class="row col-xs-12">
+	<div class="col-xs-12" ng-controller="BuildController">
+		<div class="box">
+			<div id="custom-toolbar" style ="margin: 20px">
+				<button class="btn btn-default" ng-click="add_enterprise()"><span class="fa fa-plus-square" style="margin-right:10px"></span>新增企业</button>
+				<button class="btn btn-default" ng-click="modify_html()"><span class="fa fa-edit" style="margin-right:10px"></span>修改HTML</button>
+				<button class="btn btn-success" ng-click="showHistory('打包记录', 'HistoryModal', '')"><span class="fa fa-search" style="margin-right:10px"></span>查看最近记录</button>
+				<span class="label label-warning" style="float:right;">当前正在打包：<span >{{process.task_name}}</span></span>
+				<span class="label label-info" style="float:right;">剩余<span id="taskCount">{{process.task_count}}</span>个任务</span>
+			</div>
+
+			<hr>
+
+			<div class="box-header">
+				<h3 class="box-title">项目列表</h3>
+			</div>
+			<div class="box-body">
+				<buiploy-table conf="tableConf"></buiploy-table>
+				<tm-pagination conf="paginationConf"></tm-pagination>
+			</div>
+		</div>
+	</div>
+</div>
